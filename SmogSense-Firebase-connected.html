@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SmogSense – Delhi-NCR Air Quality Decision Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06080c;--text:#eef2f7;--sub:#8b97a8;--glass:rgba(255,255,255,.05);--gb:rgba(255,255,255,.1);--aqc:var(--c4);--g:#34d399;
+--c1:#4ade80;--c2:#a3e635;--c3:#facc15;--c4:#fb923c;--c5:#f43f5e;--c6:#c026d3;color-scheme:dark}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f3f1ec;--text:#14181f;--sub:#5d6675;--glass:rgba(255,255,255,.7);--gb:rgba(0,0,0,.09);--g:#059669;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f3f1ec;--text:#14181f;--sub:#5d6675;--glass:rgba(255,255,255,.7);--gb:rgba(0,0,0,.09);--g:#059669;color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Space Grotesk',system-ui,sans-serif;color:var(--text);line-height:1.5;min-height:100vh;
+background:radial-gradient(55% 45% at 15% 0%,color-mix(in srgb,var(--aqc) 30%,transparent),transparent 70%),radial-gradient(40% 35% at 95% 100%,color-mix(in srgb,var(--aqc) 14%,transparent),transparent 70%),var(--bg);background-attachment:fixed;transition:background .6s}
+.wrap{max-width:1080px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0)) 18px calc(96px + env(safe-area-inset-bottom,0))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.logo{display:flex;align-items:center;gap:10px}.logo b{font-size:22px;letter-spacing:-.04em}.logo small{display:block;font-size:11px;color:var(--sub);letter-spacing:.12em;text-transform:uppercase}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--aqc);box-shadow:0 0 18px var(--aqc)}
+.ib{width:42px;height:42px;border-radius:50%;border:1px solid var(--gb);background:var(--glass);backdrop-filter:blur(14px);font-size:17px;cursor:pointer;color:var(--text)}
+nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0));display:flex;gap:4px;padding:5px;border-radius:99px;border:1px solid var(--gb);background:var(--glass);backdrop-filter:blur(18px);z-index:10}
+nav button{border:0;background:none;color:var(--sub);font:600 13px 'Space Grotesk',sans-serif;padding:10px 16px;border-radius:99px;cursor:pointer;display:flex;gap:6px;align-items:center}
+nav button span{font-size:15px}nav button.on{background:var(--text);color:var(--bg)}
+@media(min-width:800px){nav{position:static;transform:none;order:2}.top{display:grid;grid-template-columns:1fr auto 1fr}.top .ib{justify-self:end}}
+.pg{display:none}.pg.on{display:block;animation:in .35s ease}@keyframes in{from{opacity:0;transform:translateY(10px)}}
+.cols{display:grid;gap:16px}@media(min-width:800px){.cols{grid-template-columns:380px 1fr;align-items:start}.hero{position:sticky;top:16px}}
+.glass,.hero,.card,.act,.route,.nudge,.fi{background:var(--glass);border:1px solid var(--gb);backdrop-filter:blur(16px);border-radius:24px}
+.hero{padding:26px 22px;text-align:center}
+.gw{position:relative;width:240px;height:240px;margin:0 auto 14px}.gw svg{transform:rotate(-90deg);width:100%;height:100%;filter:drop-shadow(0 0 14px color-mix(in srgb,var(--aqc) 55%,transparent))}
+.gw circle{fill:none;stroke-width:9;stroke-linecap:round}.gbg{stroke:var(--gb)}
+#arc{stroke-dasharray:440;stroke-dashoffset:440;transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1),stroke .5s}
+.gc{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center}
+#val{font-size:76px;font-weight:700;line-height:.95;letter-spacing:-.06em}#cat{font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;margin-top:8px}
+.status{font-size:12px;color:var(--sub);margin-bottom:14px}
+.lbl{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin:16px 0 8px;text-align:left}
+select,input{width:100%;padding:13px 14px;border:1px solid var(--gb);border-radius:14px;background:var(--glass);color:var(--text);font:500 15px 'Space Grotesk',sans-serif}
+select option{color:#111}
+.btn{width:100%;margin-top:12px;padding:14px;border:0;border-radius:99px;background:var(--text);color:var(--bg);font:700 14px 'Space Grotesk',sans-serif;cursor:pointer}
+.btn:active{transform:scale(.98)}.btn:disabled{opacity:.6;cursor:wait}.ghost{background:transparent;color:var(--text);border:1px solid var(--gb)}
+.nudge{padding:16px 18px;margin-bottom:16px;border-left:3px solid var(--aqc)}
+.nudge .t{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px}
+.nudge button{border:1px solid var(--gb);background:none;color:var(--text);width:26px;height:26px;border-radius:50%;cursor:pointer;margin:0 3px}
+.nudge h3{font-size:17px;margin-bottom:2px}.nudge p{font-size:14px;color:var(--sub)}.nudge b{color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.tile{display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:99px;border:1px solid var(--gb);background:var(--glass);font-size:13px;font-weight:600;cursor:pointer}
+.tile.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.act{display:flex;gap:16px;align-items:center;padding:16px 18px;margin-bottom:12px}
+.act i{font-style:normal;font-size:22px;width:46px;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--aqc) 20%,transparent);flex-shrink:0}
+.act h4{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);font-weight:600}.act p{font-size:16px;font-weight:500}
+.route{display:flex;justify-content:space-between;align-items:center;padding:18px;margin-bottom:12px}.route.best{border-color:var(--g)}
+.route b{font-size:16px}.route small{display:block;color:var(--sub);font-size:13px}
+.pill{font-weight:700;font-size:15px;padding:7px 14px;border-radius:99px;border:1px solid currentColor}
+.fc{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 12px}
+.fi{flex:0 0 84px;padding:14px 4px;text-align:center;border-radius:20px}.fi.best{border-color:var(--g);box-shadow:0 0 20px color-mix(in srgb,var(--g) 30%,transparent)}
+.fi small{font-size:11px;color:var(--sub)}.fi div{font-size:22px;font-weight:700}
+.card{padding:22px;margin-bottom:16px}.card h4{font-size:18px;margin-bottom:8px}.note{font-size:13px;color:var(--sub)}
+#calc{margin-top:14px;font-size:14px;font-weight:600}
+.tog{display:flex;justify-content:space-between;align-items:center;padding:8px 0}.tog input{width:22px;height:22px;accent-color:var(--g)}
+.pg h2{font-size:26px;letter-spacing:-.03em;margin:4px 0 14px}
+#toast{position:fixed;top:calc(16px + env(safe-area-inset-top,0));left:50%;transform:translate(-50%,-90px);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:13px;font-weight:600;transition:.3s;z-index:20;opacity:0}
+#toast.show{transform:translate(-50%,0);opacity:1}
+
+.ic{width:1.1em;height:1.1em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vertical-align:-.18em}
+.dot{width:40px;height:40px;border-radius:14px;background:var(--aqc);color:#06080c;display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px color-mix(in srgb,var(--aqc) 55%,transparent);font-size:20px}
+.act i{font-size:24px}.card h4,.btn{display:flex;align-items:center;gap:8px}.btn{justify-content:center}
+.nudge button{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.pop{position:fixed;top:calc(12px + env(safe-area-inset-top,0));left:50%;width:min(420px,calc(100% - 24px));transform:translate(-50%,-160%);z-index:50;display:flex;gap:12px;padding:14px;border-radius:22px;border:1px solid var(--gb);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(22px);box-shadow:0 18px 50px rgba(0,0,0,.45);transition:transform .5s cubic-bezier(.2,.9,.25,1.1)}
+.pop.show{transform:translate(-50%,0)}
+.pi{width:42px;height:42px;border-radius:13px;background:var(--aqc);color:#06080c;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.pb{flex:1;min-width:0}.pm{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
+.pb h5{font-size:16px;margin:2px 0}.pb p{font-size:13px;color:var(--sub)}
+.pa{display:flex;gap:8px;margin-top:10px}.pa button{border:0;border-radius:99px;padding:8px 14px;font:600 12px 'Space Grotesk',sans-serif;cursor:pointer;background:var(--text);color:var(--bg)}
+.pa .x{background:var(--glass);color:var(--text);border:1px solid var(--gb)}
+.pc{position:absolute;top:8px;right:8px;border:0;background:none;color:var(--sub);cursor:pointer;display:none}
+.row2{display:flex;gap:10px;align-items:center}.row2 input[type=time]{flex:1}
+
+/* Sign-in / sign-up experience */
+.auth-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(3,5,8,.78);backdrop-filter:blur(18px);overflow:auto}
+.auth-overlay[hidden]{display:none!important}.auth-shell{width:min(100%,960px);min-height:560px;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;border:1px solid rgba(255,255,255,.13);border-radius:30px;background:#0d1015;box-shadow:0 30px 100px rgba(0,0,0,.5);color:#eef2f7}
+.auth-visual{position:relative;padding:42px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:radial-gradient(ellipse at 15% 12%,rgba(255,145,48,.32),transparent 52%),linear-gradient(145deg,#25180e,#11151a 65%)}
+.auth-brand{display:flex;align-items:center;gap:12px;font-size:23px;font-weight:700;letter-spacing:-.04em}.auth-brand-icon{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:#ff923b;color:#17100a;font-size:22px}.auth-eyebrow{color:#ffad6b;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}.auth-visual h1{font-size:clamp(32px,4vw,49px);line-height:1.05;letter-spacing:-.055em;margin:18px 0}.auth-visual p{color:#aab2bf;max-width:350px;font-size:14px}.auth-bullet{display:flex;align-items:center;gap:10px;margin-top:15px;color:#dce2ea;font-size:13px}.auth-bullet span{width:27px;height:27px;display:grid;place-items:center;border-radius:9px;background:rgba(255,146,59,.14);color:#ffad6b}
+.auth-panel{padding:38px;display:flex;flex-direction:column;justify-content:center;min-width:0}.auth-panel h2{font-size:27px;letter-spacing:-.04em;margin:0 0 6px}.auth-muted{color:#8d99aa;font-size:13px;margin-bottom:22px}.auth-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#171b22;padding:4px;border-radius:13px;margin-bottom:20px}.auth-switch button{border:0;border-radius:10px;background:transparent;color:#9ca7b7;padding:10px;font:600 13px inherit;cursor:pointer}.auth-switch button.active{background:#eef2f7;color:#11151a}.auth-field{display:block;color:#c4ccd7;font-size:12px;font-weight:600;margin:13px 0 7px}.auth-input-wrap{position:relative}.auth-input{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #303744;background:#141922;color:#f1f4f8;font:500 14px 'Space Grotesk',sans-serif;outline:none}.auth-input:focus{border-color:#ff923b;box-shadow:0 0 0 3px rgba(255,146,59,.13)}.auth-password{padding-right:70px}.auth-showpass{position:absolute;right:9px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#aeb8c6;font-size:11px;font-weight:700;cursor:pointer}.auth-primary,.auth-google,.auth-guest{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:99px;padding:13px 15px;font:700 14px 'Space Grotesk',sans-serif;cursor:pointer;transition:transform .15s,opacity .15s}.auth-primary{margin-top:19px;background:#ff923b;color:#1a1008;border:0}.auth-primary:hover,.auth-google:hover,.auth-guest:hover{transform:translateY(-1px)}.auth-primary:disabled{opacity:.55;cursor:wait}.auth-google{margin-top:12px;background:#fff;color:#222;border:1px solid #ddd}.auth-google svg{width:18px;height:18px}.auth-divider{display:flex;align-items:center;gap:12px;color:#7f8999;font-size:11px;margin:17px 0 3px}.auth-divider:before,.auth-divider:after{content:'';height:1px;background:#2c333e;flex:1}.auth-guest{margin-top:12px;background:transparent;border:1px solid #303744;color:#d9e0e9}.auth-foot{color:#778394;font-size:10px;line-height:1.5;margin-top:16px;text-align:center}.auth-error{display:none;border:1px solid rgba(248,113,113,.3);background:rgba(127,29,29,.2);color:#fecaca;border-radius:12px;padding:10px 12px;font-size:12px;margin-top:13px;overflow-wrap:anywhere}.auth-error.show{display:block}.auth-forgot{display:block;text-align:right;border:0;background:none;color:#ffad6b;font-size:12px;font-weight:600;cursor:pointer;margin-top:9px}.auth-user{display:flex;align-items:center;gap:8px;max-width:180px}.auth-user span{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--sub)}.auth-user button{border:1px solid var(--gb);background:var(--glass);color:var(--text);padding:8px 12px;border-radius:99px;font:600 12px 'Space Grotesk',sans-serif;cursor:pointer}
+@media(max-width:700px){.auth-overlay{align-items:flex-start;padding:12px}.auth-shell{grid-template-columns:1fr;min-height:0;border-radius:23px;max-width:460px;margin:auto}.auth-visual{padding:23px 25px 20px;min-height:190px}.auth-visual h1{font-size:30px;margin:12px 0}.auth-visual p{font-size:12px}.auth-visual .auth-points{display:none}.auth-panel{padding:24px}.auth-panel h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.auth-primary,.auth-google,.auth-guest{transition:none}}
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol><symbol id="i-nav" viewBox="0 0 24 24"><path d="M3 11 22 2l-9 19-2-8-8-2z"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol><symbol id="i-wind" viewBox="0 0 24 24"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol><symbol id="i-steth" viewBox="0 0 24 24"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></symbol><symbol id="i-hat" viewBox="0 0 24 24"><path d="M2 18h20M4 18v-2a8 8 0 0 1 16 0v2M10 8V5h4v3"/></symbol><symbol id="i-mask" viewBox="0 0 24 24"><path d="M4 8h16v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6zM4 11H2M20 11h2M8 13h8"/></symbol><symbol id="i-vol" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol><symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol><symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/></symbol></svg><div id="toast"></div>
+<div id="pop" class="pop" role="alert"><div class="pi"><svg class="ic "><use href="#i-wind"/></svg></div><div class="pb"><div class="pm"><span>SmogSense · Daily briefing</span><span id="pt"></span></div><h5 id="ph"></h5><p id="pp"></p><div class="pa"><button onclick="popGo()">View plan</button><button class="x" onclick="popClose()">Dismiss</button></div></div></div>
+<div class="wrap">
+<div class="top"><div class="logo"><div class="dot"><svg class="ic "><use href="#i-wind"/></svg></div><div><b>SmogSense</b><small id="sub">Air Quality Decision Engine</small></div></div><nav id="nav"></nav><div style="display:flex;align-items:center;gap:8px;justify-self:end"><div class="auth-user"><span id="authUserLabel">Guest mode</span><button id="authAccountBtn" type="button" onclick="handleAccountButton()">Sign in</button></div><button class="ib" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle theme"><svg class="ic "><use href="#i-moon"/></svg></button></div></div>
+<section class="pg on" id="p-plan"><div class="cols">
+ <div class="hero"><div class="gw"><svg viewBox="0 0 160 160"><circle class="gbg" cx="80" cy="80" r="70"/><circle id="arc" cx="80" cy="80" r="70"/></svg><div class="gc"><div id="val">--</div><div id="cat">Loading</div></div></div>
+ <div class="status" id="status"></div>
+ <label class="lbl" for="loc">Station</label>
+ <select id="loc" onchange="save();fetchAQI()"><option value="delhi">Delhi Central (ITO)</option><option value="anand-vihar">Anand Vihar, Delhi (Hotspot)</option><option value="gurugram">Gurugram Sector 51 (nearest available station)</option><option value="noida">Noida Sector 62 (nearest available station)</option></select>
+ <button class="btn" onclick="fetchAQI(true)"><svg class="ic "><use href="#i-refresh"/></svg> Refresh air data</button><button class="btn ghost" onclick="speak()"><svg class="ic "><use href="#i-vol"/></svg> Read my plan aloud</button></div>
+ <div>
+ <div class="nudge"><div class="t"><span>Daily briefing</span><span><button onclick="nudge(-1)" aria-label="Previous"><svg class="ic "><use href="#i-left"/></svg></button><span id="nb">1/3</span><button onclick="nudge(1)" aria-label="Next"><svg class="ic "><use href="#i-right"/></svg></button></span></div><h3 id="nt"></h3><p id="nbody"></p></div>
+ <span class="lbl" style="margin-top:0">I am a…</span><div class="chips" id="tiles"></div>
+ <div class="act"><i><svg class="ic "><use href="#i-activity"/></svg></i><div><h4>Outdoor activity</h4><p id="rA"></p></div></div>
+ <div class="act"><i><svg class="ic "><use href="#i-mask"/></svg></i><div><h4>Mask guidance</h4><p id="rM"></p></div></div>
+ <div class="act"><i><svg class="ic "><use href="#i-home"/></svg></i><div><h4>Indoor air</h4><p id="rI"></p></div></div>
+ </div></div></section>
+<section class="pg" id="p-routes"><h2>Cleanest routes</h2>
+ <div class="route"><div><b>Main Expressway</b><small>Heavy commercial traffic</small></div><span class="pill" id="aqA"></span></div>
+ <div class="route best"><div><b>Ridge Forest Bypass</b><small style="color:var(--g)">~25% lower PM2.5 (estimate)</small></div><span class="pill" id="aqB" style="color:var(--g)"></span></div>
+ <h2 style="margin-top:28px">Best outdoor window</h2><div class="fc" id="fc"></div>
+ <p class="note">Modelled estimate: Delhi air usually clears a little in the afternoon and worsens at night.</p></section>
+<section class="pg" id="p-purifier"><div class="card" style="max-width:520px"><h4><svg class="ic "><use href="#i-wind"/></svg> Purifier sizing</h4>
+ <p class="note">Rule of thumb: CADR ≥ room volume × 5 air changes per hour.</p>
+ <label class="lbl" for="sq">Room area (sq ft)</label><input type="number" id="sq" value="250" min="10" inputmode="numeric">
+ <label class="lbl" for="ceil">Ceiling height (ft)</label><input type="number" id="ceil" value="9" min="6" inputmode="decimal">
+ <label class="lbl" for="cadr">Purifier CADR (m³/h)</label><input type="number" id="cadr" value="250" min="10" inputmode="numeric">
+ <button class="btn" onclick="calc()">Check capacity</button><div id="calc"></div></div></section>
+<section class="pg" id="p-settings"><div style="max-width:520px">
+ <div class="card"><h4><svg class="ic "><use href="#i-globe"/></svg> Language</h4><select id="lang" onchange="save();render()"><option value="en">English</option><option value="hi">हिंदी (Hindi)</option><option value="ja">日本語 (Japanese)</option></select><p class="note" style="margin-top:8px">Action tips are translated. More languages coming.</p></div>
+ <div class="card"><h4><svg class="ic "><use href="#i-bell"/></svg> Notifications</h4>
+ <div class="tog"><label for="popOn">Daily popup alert</label><input type="checkbox" id="popOn" checked onchange="save()"></div>
+ <label class="lbl" for="popTime">Popup time</label><input type="time" id="popTime" value="07:00" onchange="save()">
+ <p class="note" style="margin-top:8px">Appears when you open SmogSense after this time each day, or at this time if the page is open.</p>
+ <div class="tog" style="margin-top:8px"><label for="nOn">Show briefing card on Plan</label><input type="checkbox" id="nOn" checked onchange="save();vis()"></div>
+ <button class="btn ghost" onclick="testNotif()"><svg class="ic "><use href="#i-bell"/></svg> Preview popup</button></div>
+ <div class="card" id="waqiSettings"><h4><svg class="ic "><use href="#i-globe"/></svg> Live AQI connection</h4>
+ <p class="note">A WAQI token is preconfigured for this local test. You can replace it below; saved tokens take priority over the default token.</p>
+ <label class="lbl" for="waqiTokenInput">WAQI API token</label>
+ <input id="waqiTokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your WAQI token" aria-describedby="waqiTokenHelp">
+ <p class="note" id="waqiTokenHelp" style="margin-top:8px">For local testing only: browser storage is not secure against someone using this device. For a public app, use a backend proxy.</p>
+ <button class="btn" onclick="saveWaqiToken()">Save token &amp; test connection</button>
+ <button class="btn ghost" onclick="clearWaqiToken()">Forget saved token</button>
+ <p class="note" id="waqiTokenStatus" role="status" style="margin-top:8px"></p></div>
+ <div class="card"><h4><svg class="ic "><use href="#i-info"/></svg> About</h4><p class="note">AQI categories follow India's CPCB scale. Live AQI is retrieved from WAQI when available. Route comparisons are illustrative estimates, not measured route pollution. Forecasts are unavailable until a forecast source is connected. Tips are general guidance, not medical advice.</p></div></div></section>
+</div>
+<div id="authOverlay" class="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+ <div class="auth-shell">
+  <aside class="auth-visual">
+   <div class="auth-brand"><span class="auth-brand-icon">≋</span><span>SmogSense</span></div>
+   <div><div class="auth-eyebrow">Breathe smarter</div><h1>Know the air.<br>Protect your day.</h1><p>Personalized air-quality guidance for the places and people that matter to you.</p>
+    <div class="auth-points"><div class="auth-bullet"><span>✓</span> AQI readings with station timestamps</div><div class="auth-bullet"><span>✓</span> Guidance tailored to your activity</div><div class="auth-bullet"><span>✓</span> Your preferences saved to your account</div></div>
+   </div>
+   <div class="auth-foot" style="text-align:left;margin:0">Air-quality guidance is informational and is not a substitute for medical advice.</div>
+  </aside>
+  <section class="auth-panel">
+   <h2 id="authTitle">Welcome to SmogSense</h2><p class="auth-muted" id="authSubtitle">Sign in to continue to your personal air-quality dashboard.</p>
+   <div class="auth-switch"><button id="authSignInTab" class="active" type="button" onclick="setAuthMode('signin')">Sign in</button><button id="authSignUpTab" type="button" onclick="setAuthMode('signup')">Create account</button></div>
+   <form id="authForm" novalidate>
+    <label class="auth-field" for="authEmail">Email address</label><input class="auth-input" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+    <label class="auth-field" for="authPassword">Password</label><div class="auth-input-wrap"><input class="auth-input auth-password" id="authPassword" type="password" autocomplete="current-password" placeholder="Enter your password" required minlength="8"><button class="auth-showpass" type="button" onclick="toggleAuthPassword()">SHOW</button></div>
+    <div id="authConfirmWrap" hidden><label class="auth-field" for="authConfirm">Confirm password</label><input class="auth-input" id="authConfirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" minlength="8"></div>
+    <button class="auth-forgot" id="authForgot" type="button" onclick="forgotPassword()">Forgot password?</button>
+    <button class="auth-primary" id="authSubmit" type="submit">Sign in</button>
+   </form>
+   <div class="auth-divider">OR CONTINUE WITH</div>
+   <button class="auth-google" id="authGoogle" type="button" onclick="signInWithGoogle()"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.99 46.98 31.8 46.98 24.55z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.6.28-3.14.78-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
+   <div class="auth-error" id="authError" role="status" aria-live="polite"></div>
+   <button class="auth-guest" type="button" onclick="continueAsGuest()">Continue without an account</button>
+   <p class="auth-foot">Real account sign-in uses Firebase Authentication once you add your project configuration. Guest mode does not create an account or sync data across devices.</p>
+  </section>
+ </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const ic=n=>`<svg class="ic"><use href="#i-${n}"/></svg>`;
+const T={en:{p:{jogger:"Runner",asthma:"Asthma",parent:"Parent & Child",healthy:"Healthy Adult",worker:"Outdoor Worker"},sub:"Air Quality Decision Engine"},
+hi:{p:{jogger:"धावक",asthma:"दमा रोगी",parent:"अभिभावक और बच्चे",healthy:"स्वस्थ वयस्क",worker:"बाहरी कामगार"},sub:"वायु गुणवत्ता निर्णय इंजन"},
+ja:{p:{jogger:"ランナー",asthma:"喘息患者",parent:"保護者と子供",healthy:"健康な成人",worker:"屋外作業者"},sub:"空気質意思決定エンジン"}};
+const P={jogger:"flame",asthma:"steth",parent:"users",healthy:"smile",worker:"hat"};
+const SP={en:"en-US",hi:"hi-IN",ja:"ja-JP"};
+const WAQI_TOKEN_KEY="ss_waqi_token";
+// Local prototype default. For public deployment, move this token behind a backend proxy.
+const WAQI_DEFAULT_TOKEN="b324b9a232d93397587b3d076e420063e68db5b7";
+function getWaqiToken(){try{return localStorage.getItem(WAQI_TOKEN_KEY)||WAQI_DEFAULT_TOKEN}catch(e){return WAQI_DEFAULT_TOKEN}}
+function saveWaqiToken(){const input=$("waqiTokenInput");const token=(input.value||"").trim();if(!token){$("waqiTokenStatus").textContent="Paste your WAQI token first.";return}try{localStorage.setItem(WAQI_TOKEN_KEY,token);$("waqiTokenStatus").textContent="Token saved in this browser. Testing connection…";fetchAQI(true)}catch(e){$("waqiTokenStatus").textContent="Could not save token in browser storage."}}
+function clearWaqiToken(){try{localStorage.removeItem(WAQI_TOKEN_KEY)}catch(e){}$("waqiTokenInput").value="";$("waqiTokenStatus").textContent="Saved token cleared.";S.aqi=null;S.live=false;S.error="Add your WAQI API token in Settings to load live data.";render()}
+// Direct feeds are used where they are known to work. For Gurugram and Noida,
+// use WAQI's geo endpoint to find the nearest reporting station, then try the city feed.
+const WAQI_FEEDS={
+ delhi:["geo:28.6280;77.2410","delhi"],
+ "anand-vihar":["geo:28.6469;77.3160","anand-vihar"],
+ gurugram:["geo:28.4239;77.0700","gurugram","gurgaon"],
+ noida:["geo:28.6279;77.3649","noida"]
+};
+const WAQI_SEARCH_TERMS={
+ delhi:["ITO Delhi","Income Tax Office Delhi","Delhi"],
+ "anand-vihar":["Anand Vihar Delhi","Anand Vihar"],
+ gurugram:["Gurugram Sector 51","Gurgaon Sector 51","Gurugram","Gurgaon"],
+ noida:["Noida Sector 62","Noida"]
+};
+const CAT=[[50,"Good","--c1"],[100,"Satisfactory","--c2"],[200,"Moderate","--c3"],[300,"Poor","--c4"],[400,"Very Poor","--c5"],[1e9,"Severe","--c6"]];
+const S={aqi:null,live:false,profile:"jogger",ni:0,station:"",measuredAt:"",pollutants:null,error:""};
+const tips={
+en:{jogger:[["Cancel outdoor runs. Use a gym or treadmill.","Safe for outdoor cardio."],["N95 mask for any outdoor transit.","Mask optional."],["Run the purifier on high.","Ventilate your room."]],
+asthma:[["Stay indoors. Avoid exertion.","Short light walks are okay."],["N95/N99 mask and keep your inhaler handy.","Keep your inhaler handy."],["Purifier on continuously, windows sealed.","Purifier on, windows closed at peak hours."]],
+parent:[["Skip park and outdoor play today.","Outdoor play is fine."],["Child-fit N95 mask for school travel.","No mask needed."],["Run a purifier in the bedroom or nursery.","Run a purifier in the bedroom or nursery."]],
+worker:[["Take an indoor rest break every 2 hours.","Take regular shade and water breaks."],["N95 mask throughout field duty.","N95 mask advised near traffic."],["Rest in a clean-air room between shifts.","Rest in a clean-air room between shifts."]],
+healthy:[["Avoid long heavy exertion outdoors.","Normal routine is fine."],["Wear an N95 on public transport.","Mask optional."],["Purifier on Auto mode.","Close windows in peak traffic hours."]]},
+hi:{x:["बाहर की गतिविधि कम करें।","N95 मास्क पहनें।","एयर प्यूरीफायर चालू रखें और खिड़कियाँ बंद रखें।"],ok:["बाहर की सामान्य गतिविधि ठीक है।","मास्क वैकल्पिक है।","कमरे में हवा आने दें।"]},
+ja:{x:["屋外での運動は控えてください。","N95マスクを着用してください。","空気清浄機を稼働し、窓を閉めてください。"],ok:["屋外活動は問題ありません。","マスクは任意です。","室内を換気しましょう。"]}};
+function cat(a){return CAT.find(c=>a<=c[0])||CAT[5]}
+function bad(){return Number.isFinite(S.aqi)&&S.aqi>100}
+function plan(){if(!Number.isFinite(S.aqi))return ["Waiting for a valid AQI reading.","Mask guidance unavailable until data loads.","Check local air-quality advice until data is available."];const l=$("lang").value;
+ if(l==="en"){const t=tips.en[S.profile];const i=bad()?0:1;return[t[0][i],t[1][i],t[2][i]]}
+ const t=tips[l];return bad()?t.x:t.ok}
+function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2200)}
+function save(){try{localStorage.setItem("ss",JSON.stringify({loc:$("loc").value,profile:S.profile,lang:$("lang").value,nOn:$("nOn").checked,popOn:$("popOn").checked,popTime:$("popTime").value,theme:document.documentElement.dataset.theme||""}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem("ss")||"{}");if(d.loc)$("loc").value=d.loc;if(d.profile)S.profile=d.profile;if(d.lang)$("lang").value=d.lang;if(d.nOn===false)$("nOn").checked=false;if(d.popOn===false)$("popOn").checked=false;if(d.popTime)$("popTime").value=d.popTime;if(d.theme)document.documentElement.dataset.theme=d.theme}catch(e){}}
+function toggleTheme(){const dark=document.documentElement.dataset.theme==="dark"||(!document.documentElement.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=dark?"light":"dark";$("themeBtn").innerHTML=ic(dark?"moon":"sun");save()}
+function show(id){document.querySelectorAll(".pg").forEach(p=>p.classList.toggle("on",p.id==="p-"+id));document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.id===id));scrollTo(0,0)}
+function buildNav(){$("nav").innerHTML=[["plan","shield","Plan"],["routes","nav","Routes"],["purifier","wind","Purifier"],["settings","sliders","Settings"]].map(([i,e,n],k)=>`<button data-id="${i}" class="${k?"":"on"}" onclick="show('${i}')">${ic(e)}${n}</button>`).join("")}
+function tiles(){const l=T[$("lang").value];$("tiles").innerHTML=Object.keys(P).map(k=>`<div class="tile ${k===S.profile?"on":""} ${k==="worker"?"wide":""}" onclick="pick('${k}')">${ic(P[k])}${l.p[k]}</div>`).join("")}
+function pick(k){S.profile=k;save();render()}
+function nudges(){const c=cat(S.aqi);const loc=$("loc").selectedOptions[0].text;return[
+ ["Today's Health Nudge",`${loc}: AQI <b>${S.aqi} (${c[1]})</b>. ${bad()?"Best outdoor window is the afternoon. Mask up!":"Air is acceptable. Enjoy the day."}`],
+ ["Clean Commute Nudge",`Main roads carry heavier PM2.5. Try the <b>Ridge Forest Bypass</b> for roughly 25% lower exposure.`],
+ ["Indoor Air Nudge",`${bad()?"Keep windows sealed and run your <b>HEPA purifier</b> on high until the afternoon.":"Ventilate now while the air is fine."}`]]}
+function nudge(d){S.ni=(S.ni+d+3)%3;render()}
+function vis(){document.querySelector(".nudge").style.display=$("nOn").checked?"":"none"}
+function render(){if(!Number.isFinite(S.aqi)){ $("val").textContent="--";$("cat").textContent="Unavailable";$("cat").style.color="var(--sub)";$("arc").style.strokeDashoffset=440;$("status").textContent=S.error||"Loading live AQI data…";$("rA").textContent="Awaiting verified air-quality data.";$("rM").textContent="No live reading available.";$("rI").textContent="Check local official guidance.";$("aqA").textContent="Unavailable";$("aqB").textContent="Estimate unavailable";$("fc").innerHTML="<p class=note>Forecast unavailable: no verified forecast is connected.</p>";return;}const c=cat(S.aqi),col=`var(${c[2]})`;
+ $("val").textContent=S.aqi;$("cat").textContent=c[1];$("cat").style.color=col;
+ $("arc").style.stroke=col;document.documentElement.style.setProperty("--aqc",col);$("arc").style.strokeDashoffset=440-440*Math.min(S.aqi,500)/500;
+ const[a,m,i]=plan();$("rA").textContent=a;$("rM").textContent=m;$("rI").textContent=i;
+ $("sub").textContent=T[$("lang").value].sub;tiles();
+ const n=nudges()[S.ni];$("nt").textContent=n[0];$("nbody").innerHTML=n[1];$("nb").textContent=(S.ni+1)+"/3";
+ const A=Math.round(S.aqi*1.2),B=Math.round(S.aqi*.75);
+ $("aqA").textContent="Estimate "+A;$("aqA").style.color=`var(${cat(A)[2]})`;$("aqB").textContent="Estimate "+B;
+ $("fc").innerHTML="<p class=note>Hourly forecast is not connected to a verified forecast source yet. Route and hourly estimates are illustrative only, not measured pollution data.</p>";
+ $("status").textContent=S.live?`Live WAQI reading · ${S.station||"Monitoring station"} · Measured ${S.measuredAt||"time unavailable"}`:(S.error||"Live data unavailable")}
+async function fetchAQI(manual){
+ const loc=$("loc").value;
+ const feeds=WAQI_FEEDS[loc]||WAQI_FEEDS.delhi;
+ const searchTerms=WAQI_SEARCH_TERMS[loc]||WAQI_SEARCH_TERMS.delhi;
+ const WAQI_TOKEN=getWaqiToken();
+ if(!WAQI_TOKEN){S.aqi=null;S.live=false;S.error="Add your WAQI API token in Settings to load live data.";render();if($("waqiTokenStatus"))$("waqiTokenStatus").textContent="No token saved in this browser yet.";if(manual)toast("Add your WAQI token in Settings");return;}
+ const button=document.querySelector('button[onclick="fetchAQI(true)"]');if(button){button.disabled=true;button.setAttribute("aria-busy","true");}
+ S.error="Fetching live air-quality data…";render();
+ let lastError="No reporting station returned valid data.";
+ const request=async(url)=>{
+   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);
+   try{const r=await fetch(url,{cache:"no-store",signal:controller.signal});if(!r.ok)throw new Error(`WAQI HTTP error ${r.status}`);return await r.json();}
+   finally{clearTimeout(timer)}
+ };
+ const validFeed=(x)=>x&&x.status==="ok"&&x.data&&Number.isFinite(Number(x.data.aqi))&&Number(x.data.aqi)>=0;
+ try{
+  let d=null;
+  // Try a nearby-station geo lookup and any known direct aliases first.
+  for(const feed of feeds){
+   try{
+    const path=feed.startsWith("geo:")?feed:encodeURIComponent(feed);
+    const candidate=await request(`https://api.waqi.info/feed/${path}/?token=${encodeURIComponent(WAQI_TOKEN)}`);
+    if(validFeed(candidate)){d=candidate;break;}
+    lastError=typeof candidate.data==="string"?candidate.data:(candidate.data?.message||candidate.status||"No valid AQI reading");
+   }catch(err){lastError=err?.name==="AbortError"?"The AQI request timed out.":(err?.message||"Request failed");console.warn(`WAQI feed ${feed} failed:`,lastError);}
+  }
+  // If a direct station slug is unknown, search WAQI's station index, then request the station by its UID.
+  if(!d){
+   for(const term of searchTerms){
+    try{
+     const search=await request(`https://api.waqi.info/search/?keyword=${encodeURIComponent(term)}&token=${encodeURIComponent(WAQI_TOKEN)}`);
+     if(search.status!=="ok"||!Array.isArray(search.data)||!search.data.length){lastError=typeof search.data==="string"?search.data:(search.status||"No stations found");continue;}
+     const normalized=term.toLowerCase();
+     const ranked=search.data.filter(x=>x&&x.uid!==undefined).sort((a,b)=>{
+       const an=(a.station?.name||"").toLowerCase(),bn=(b.station?.name||"").toLowerCase();
+       const score=(n)=>{let v=0;if(n.includes(normalized))v+=10;if(loc==="anand-vihar"&&n.includes("anand vihar"))v+=30;if(loc==="gurugram"&&(n.includes("gurugram")||n.includes("gurgaon")))v+=20;if(loc==="noida"&&n.includes("noida"))v+=20;if(loc==="delhi"&&(n.includes("ito")||n.includes("income tax")))v+=30;return v;};return score(bn)-score(an);
+     });
+     for(const station of ranked){
+       try{const candidate=await request(`https://api.waqi.info/feed/@${encodeURIComponent(station.uid)}/?token=${encodeURIComponent(WAQI_TOKEN)}`);if(validFeed(candidate)){d=candidate;break;}lastError=typeof candidate.data==="string"?candidate.data:(candidate.data?.message||candidate.status||"Station has no valid AQI reading");}
+       catch(err){lastError=err?.message||"Station request failed";}
+     }
+     if(d)break;
+    }catch(err){lastError=err?.name==="AbortError"?"The station search timed out.":(err?.message||"Station search failed");}
+   }
+  }
+  if(!d)throw new Error(lastError||"No station with a valid reading was found nearby.");
+  S.aqi=Number(d.data.aqi);S.live=true;S.error="";S.station=d.data.city?.name||"Station not specified";S.measuredAt=d.data.time?.s||"Timestamp unavailable";S.pollutants=d.data.iaqi||null;
+  render();if($("waqiTokenStatus"))$("waqiTokenStatus").textContent=`Connected: ${S.station} · AQI ${S.aqi}`;if(manual)toast("Live AQI updated from WAQI");
+ }catch(e){S.aqi=null;S.live=false;S.error=`Live AQI unavailable for this location. ${e?.message||"Check your token, connection, or nearby station coverage."}`;render();if($("waqiTokenStatus"))$("waqiTokenStatus").textContent=`Connection failed: ${e?.message||"check token, connection, or station coverage"}`;if(manual)toast("Could not load live AQI");console.error("WAQI request failed:",e);}
+ finally{if(button){button.disabled=false;button.removeAttribute("aria-busy");}}
+}
+function calc(){const sq=+$("sq").value,h=+$("ceil").value,c=+$("cadr").value,r=$("calc");
+ if(!(sq>0&&h>0&&c>0)){r.textContent="Enter positive numbers in all fields.";r.style.color="var(--c5)";return}
+ const need=Math.round(sq*h*0.0283168*5);const ok=c>=need;
+ r.innerHTML=ok?`Good: you need about ${need} m³/h and yours is ${c}. ${S.aqi>300?"At this AQI keep it on high and windows sealed.":""}`:`Undersized: you need about ${need} m³/h but yours is ${c}. Use a bigger unit or a smaller room.`;
+ r.style.color=ok?"var(--g)":"var(--c5)"}
+function speak(){if(!("speechSynthesis" in window)){toast("Voice not supported here");return}
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(`AQI ${S.aqi}, ${cat(S.aqi)[1]}. ${$("rA").textContent} ${$("rM").textContent}`);u.lang=SP[$("lang").value];speechSynthesis.speak(u)}
+let popT;
+function showPop(force){if(!force&&!$("popOn").checked)return;const c=cat(S.aqi),p=plan();
+ $("ph").textContent="AQI "+S.aqi+" · "+c[1];$("pp").textContent=p[0]+" "+p[1];
+ $("pt").textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+ $("pop").classList.add("show");clearTimeout(popT);popT=setTimeout(popClose,14000);
+ if("Notification" in window&&Notification.permission==="granted"&&document.hidden)new Notification("SmogSense · AQI "+S.aqi+" ("+c[1]+")",{body:p[0]})}
+function popClose(){$("pop").classList.remove("show")}
+function popGo(){popClose();show("plan")}
+function dailyCheck(){const n=new Date(),d=n.toDateString(),hm=n.toTimeString().slice(0,5);let last="";
+ try{last=localStorage.getItem("ss_last")||""}catch(e){}
+ if(last===d||!$("popOn").checked||hm<$("popTime").value)return;
+ try{localStorage.setItem("ss_last",d)}catch(e){}showPop()}
+function testNotif(){if("Notification" in window&&Notification.permission==="default")Notification.requestPermission();showPop(true)}
+buildNav();load();
+try{$("waqiTokenInput").value=getWaqiToken();if(getWaqiToken())$("waqiTokenStatus").textContent="WAQI token configured. Testing live connection…";}catch(e){}
+const th=document.documentElement.dataset.theme;$("themeBtn").innerHTML=ic((th==="dark"||(!th&&matchMedia("(prefers-color-scheme: dark)").matches))?"sun":"moon");
+vis();render();fetchAQI().then(dailyCheck);setInterval(dailyCheck,30000);
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script>
+// Firebase web app config from the SmogSense project. Configure authorized domains in Firebase Console.
+// Firebase web config is not a server secret; protect any database/storage with appropriate security rules.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCWy5avrJ-carvXxEMFjit60EPFfzE_iyU",
+  authDomain: "smogsense-1ff45.firebaseapp.com",
+  projectId: "smogsense-1ff45",
+  storageBucket: "smogsense-1ff45.firebasestorage.app",
+  messagingSenderId: "56797545375",
+  appId: "1:56797545375:web:71c20734c0b0a5451fb3aa",
+  measurementId: "G-WV7JPSRN4E"
+};
+let firebaseAuth = null;
+let authMode = "signin";
+let currentAuthUser = null;
+let authConfigured = false;
+function firebaseConfigReady(){return FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith("YOUR_") && FIREBASE_CONFIG.authDomain && !FIREBASE_CONFIG.authDomain.startsWith("YOUR_") && FIREBASE_CONFIG.projectId && !FIREBASE_CONFIG.projectId.startsWith("YOUR_") && FIREBASE_CONFIG.appId && !FIREBASE_CONFIG.appId.startsWith("YOUR_")}
+function authError(message){const el=document.getElementById("authError");el.textContent=message;el.classList.add("show")}
+function clearAuthError(){const el=document.getElementById("authError");el.textContent="";el.classList.remove("show")}
+function setAuthMode(mode){authMode=mode;clearAuthError();const signIn=mode==="signin";document.getElementById("authSignInTab").classList.toggle("active",signIn);document.getElementById("authSignUpTab").classList.toggle("active",!signIn);document.getElementById("authTitle").textContent=signIn?"Welcome back":"Create your account";document.getElementById("authSubtitle").textContent=signIn?"Sign in to continue to your personal air-quality dashboard.":"Join SmogSense to keep your preferences with your account.";document.getElementById("authSubmit").textContent=signIn?"Sign in":"Create account";document.getElementById("authConfirmWrap").hidden=signIn;document.getElementById("authForgot").style.display=signIn?"block":"none";document.getElementById("authPassword").autocomplete=signIn?"current-password":"new-password";document.getElementById("authConfirm").required=!signIn}
+function toggleAuthPassword(){const p=document.getElementById("authPassword"),b=document.querySelector(".auth-showpass");p.type=p.type==="password"?"text":"password";b.textContent=p.type==="password"?"SHOW":"HIDE"}
+function showAuth(){document.getElementById("authOverlay").hidden=false;document.body.style.overflow="hidden"}
+function hideAuth(){document.getElementById("authOverlay").hidden=true;document.body.style.overflow=""}
+function continueAsGuest(){sessionStorage.setItem("ss_guest_mode","1");hideAuth();document.getElementById("authUserLabel").textContent="Guest mode";document.getElementById("authAccountBtn").textContent="Sign in";toast("Continuing as guest")}
+function handleAccountButton(){if(currentAuthUser){if(firebaseAuth)firebaseAuth.signOut().then(()=>{sessionStorage.removeItem("ss_guest_mode");showAuth()}).catch(e=>toast("Sign out failed: "+e.message));}else{sessionStorage.removeItem("ss_guest_mode");setAuthMode("signin");showAuth()}}
+function friendlyAuthError(e){const c=e&&e.code;const map={"auth/invalid-email":"Enter a valid email address.","auth/user-not-found":"No account was found for that email.","auth/wrong-password":"The email or password is incorrect.","auth/invalid-credential":"The email or password is incorrect.","auth/email-already-in-use":"An account already exists for this email. Try signing in.","auth/weak-password":"Choose a stronger password with at least 8 characters, including uppercase, lowercase, and a number.","auth/popup-closed-by-user":"Google sign-in was closed before completion.","auth/popup-blocked":"Your browser blocked the Google sign-in popup. Allow popups and try again.","auth/unauthorized-domain":"This website domain is not authorized in Firebase Authentication settings.","auth/network-request-failed":"Network error. Check your connection and try again.","auth/operation-not-allowed":"Enable this sign-in method in Firebase Console > Authentication > Sign-in method."};return map[c]||((e&&e.message)||"Authentication failed. Check your Firebase setup and try again.")}
+document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();clearAuthError();const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value,confirm=document.getElementById("authConfirm").value,btn=document.getElementById("authSubmit");if(!email||!document.getElementById("authEmail").checkValidity()){authError("Enter a valid email address.");return}if(!password){authError("Enter your password.");return}if(authMode==="signup"){if(password.length<8||!/[a-z]/.test(password)||!/[A-Z]/.test(password)||!/[0-9]/.test(password)){authError("Use at least 8 characters with uppercase, lowercase, and a number.");return}if(password!==confirm){authError("Your passwords do not match.");return}}if(!authConfigured||!firebaseAuth){authError("Real sign-in is not configured yet. Add your Firebase Web App config in FIREBASE_CONFIG and enable Email/Password sign-in in Firebase Console. No fake/local account has been created.");return}btn.disabled=true;btn.textContent=authMode==="signup"?"Creating account…":"Signing in…";try{if(authMode==="signup"){const cred=await firebaseAuth.createUserWithEmailAndPassword(email,password);await cred.user.updateProfile({displayName:email.split("@")[0]})}else{await firebaseAuth.signInWithEmailAndPassword(email,password)}}catch(err){authError(friendlyAuthError(err))}finally{btn.disabled=false;btn.textContent=authMode==="signup"?"Create account":"Sign in"}});
+async function signInWithGoogle(){clearAuthError();if(!authConfigured||!firebaseAuth){authError("Google sign-in needs your Firebase project config. Add FIREBASE_CONFIG, enable Google in Firebase Console > Authentication > Sign-in method, and add your site to Authorized domains.");return}try{const provider=new firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});await firebaseAuth.signInWithPopup(provider)}catch(e){authError(friendlyAuthError(e))}}
+async function forgotPassword(){clearAuthError();const email=document.getElementById("authEmail").value.trim();if(!email||!document.getElementById("authEmail").checkValidity()){authError("Enter your email address above first.");return}if(!authConfigured||!firebaseAuth){authError("Password reset requires Firebase Authentication to be configured first.");return}try{await firebaseAuth.sendPasswordResetEmail(email);authError("Password reset email sent if an account exists for that address.")}catch(e){authError(friendlyAuthError(e))}}
+function initSmogSenseAuth(){if(!firebaseConfigReady()||!window.firebase){authConfigured=false;showAuth();return}try{if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);firebaseAuth=firebase.auth();authConfigured=true;firebaseAuth.onAuthStateChanged(user=>{currentAuthUser=user;if(user){sessionStorage.removeItem("ss_guest_mode");hideAuth();document.getElementById("authUserLabel").textContent=user.displayName||user.email||"Signed in";document.getElementById("authAccountBtn").textContent="Sign out"}else{document.getElementById("authUserLabel").textContent="Guest mode";document.getElementById("authAccountBtn").textContent="Sign in";if(sessionStorage.getItem("ss_guest_mode")==="1")hideAuth();else showAuth()}})}catch(e){authConfigured=false;showAuth();authError("Firebase initialization failed: "+(e.message||"check your project configuration"))}}
+initSmogSenseAuth();
+</script>
+
+</body>
+</html>
